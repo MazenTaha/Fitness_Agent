@@ -2,13 +2,11 @@ import { NextResponse } from "next/server";
 import {
   AIProviderConfigurationError,
   AIProviderServiceError,
-  createGroqChatCompletion
-} from "@/lib/ai/providers/groq";
-import { getAgent } from "@/lib/agents";
-import { buildAgentMessages } from "@/lib/agents/message-builder";
-import { selectAgent } from "@/lib/agents/router";
-
-const MAX_MESSAGE_LENGTH = 2000;
+  AgentInputValidationError,
+  MAX_AGENT_MESSAGE_LENGTH,
+  runAgent
+} from "@/lib/agents/run-agent";
+import type { ClientHistoryMessage } from "@/lib/agents/types";
 
 type AgentRequest = {
   message?: unknown;
@@ -18,7 +16,7 @@ type AgentRequest = {
 type ValidationSuccess = {
   success: true;
   message: string;
-  history?: unknown;
+  history?: ClientHistoryMessage[];
 };
 
 type ValidationFailure = {
@@ -56,10 +54,10 @@ function validateRequest(payload: AgentRequest): ValidationSuccess | ValidationF
     };
   }
 
-  if (message.length > MAX_MESSAGE_LENGTH) {
+  if (message.length > MAX_AGENT_MESSAGE_LENGTH) {
     return {
       success: false,
-      error: `Message must be ${MAX_MESSAGE_LENGTH} characters or fewer.`,
+      error: `Message must be ${MAX_AGENT_MESSAGE_LENGTH} characters or fewer.`,
       status: 413
     };
   }
@@ -75,7 +73,7 @@ function validateRequest(payload: AgentRequest): ValidationSuccess | ValidationF
   return {
     success: true,
     message,
-    history: payload.history
+    history: payload.history as ClientHistoryMessage[] | undefined
   };
 }
 
@@ -102,29 +100,25 @@ export async function POST(request: Request) {
     );
   }
 
-  const agentId = selectAgent(validation.message);
-  const agent = getAgent(agentId);
-  const messages = buildAgentMessages({
-    agent,
-    message: validation.message,
-    history: validation.history
-  });
-
   try {
-    const { reply } = await createGroqChatCompletion({
-      agent,
-      messages
+    const result = await runAgent({
+      message: validation.message,
+      history: validation.history
     });
 
     return NextResponse.json({
-      reply,
-      agent: {
-        id: agent.id,
-        name: agent.name
-      }
+      reply: result.reply,
+      agent: result.agent
     });
   } catch (error) {
     console.error("Agent API error", error);
+
+    if (error instanceof AgentInputValidationError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.status }
+      );
+    }
 
     if (error instanceof AIProviderConfigurationError) {
       return NextResponse.json(

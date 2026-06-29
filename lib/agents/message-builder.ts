@@ -3,6 +3,7 @@ import type {
   ChatMessage,
   ClientHistoryMessage
 } from "./types";
+import { METRIC_UNITS_POLICY } from "./unit-policy";
 
 type BuildAgentMessagesInput = {
   agent: AgentConfig;
@@ -47,10 +48,12 @@ export function buildAgentMessages({
   message,
   history
 }: BuildAgentMessagesInput): ChatMessage[] {
+  const systemPrompt = [agent.systemPrompt, METRIC_UNITS_POLICY].join("\n\n");
+
   return [
     {
       role: "system",
-      content: agent.systemPrompt
+      content: systemPrompt
     },
     ...sanitizeHistory(history, agent.maxHistoryMessages),
     {

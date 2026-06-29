@@ -16,11 +16,6 @@ export default function FitnessAgentPage() {
               <h1 className="font-heading mt-4 text-4xl font-bold tracking-tight sm:text-5xl">
                 Train smarter, eat better, recover with a plan.
               </h1>
-              <p className="mt-4 max-w-2xl text-sm text-slate-200 sm:text-base">
-                FitCoach AI routes questions to focused agents for workouts,
-                nutrition, programming, exercise form, and safer next steps
-                when health risks come up.
-              </p>
             </div>
             <div className="grid gap-3 text-sm text-slate-100 sm:grid-cols-3 lg:max-w-xl">
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
